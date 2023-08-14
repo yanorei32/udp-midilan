@@ -18,7 +18,7 @@ udp-midilan client <ServerIP>:<Port>
 MIDI  MIDI
 Out    In
 ```
-For further specifications, see (protocol.md)[docs/protocol.md].
+For further specifications, see [docs/protocol.md](protocol.md).
 
 ### IMPORTANT
 This software will send **one** MIDI message as **one** UDP packet.
