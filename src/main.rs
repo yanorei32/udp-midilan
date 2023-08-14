@@ -11,13 +11,15 @@ use tokio::{net::UdpSocket, sync::mpsc, time};
 mod model;
 
 type MidiIntr = (mpsc::Receiver<Vec<u8>>, mpsc::Sender<Vec<u8>>);
-static PREFIX_MIDI_MESSAGE: u8 = 0x10u8;
-static KEEPALIVE_MIDI_MESSAGE: [u8; 4] = [0xf0, 0x73, 0x02, 0xf7];
+
+static PREFIX_MIDI_MESSAGE: u8 = 0x10;
+static KEEPALIVE_MESSAGE: [u8; 2] = [0x00, 0x00];
+
 
 async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Error>> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     sock.connect(server).await?;
-    sock.send(&KEEPALIVE_MIDI_MESSAGE).await?;
+    sock.send(&KEEPALIVE_MESSAGE).await?;
 
     let mut message = vec![0u8; 128];
     let mut to_send = vec![PREFIX_MIDI_MESSAGE];
@@ -42,15 +44,15 @@ async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Er
                         midi.1.send(content.to_vec()).await?;
                     }
                     _ => {
-                        println!("<System> Unknown Message: {:?}", &message[1..d]);
+                        println!("<System> Unknown Message: {:?}", &message[..d]);
                         continue;
                     }
                 }
 
             }
             _ = time::sleep(time::Duration::from_secs(60)) => {
-                println!("KeepAlive: {:?}", &KEEPALIVE_MIDI_MESSAGE);
-                sock.send(&KEEPALIVE_MIDI_MESSAGE).await?;
+                println!("KeepAlive: {:?}", &KEEPALIVE_MESSAGE);
+                sock.send(&KEEPALIVE_MESSAGE).await?;
             }
         }
     }
@@ -81,13 +83,16 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
             d = sock.recv_from(&mut message) => {
                 let (len, addr) = d?;
 
-                match (&message[0], &message[1..len]) {
-                    (prefix, content) if prefix == &PREFIX_MIDI_MESSAGE => {
+                match (&message[0], &message[1..len], &message[..len]) {
+                    (prefix, content, _) if prefix == &PREFIX_MIDI_MESSAGE => {
                         println!("<MIDI> Recv: {:?}", content);
                         midi.1.send(content.to_vec()).await?;
                     }
+                    (_, _, message) if message == KEEPALIVE_MESSAGE => {
+                        println!("<System> KeepAlive from {:?}", addr);
+                    }
                     _ => {
-                        println!("<System> Unknown Message: {:?}", &message[1..len]);
+                        println!("<System> Unknown Message: {:?}", &message[..len]);
                     }
                 }
 
