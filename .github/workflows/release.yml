@@ -17,7 +17,7 @@ jobs:
 
       - run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools gcc-mingw-w64-x86-64 alsa-lib
+          sudo apt-get install -y musl-tools gcc-mingw-w64-x86-64 libasound2-dev
 
       - uses: actions-rs/toolchain@v1.0.7
         with:
