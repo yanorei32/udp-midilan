@@ -18,13 +18,14 @@ udp-midilan client <ServerIP>:<Port>
 MIDI  MIDI
 Out    In
 ```
+For further specifications, see (protocol.md)[docs/protocol.md].
 
 ### IMPORTANT
 This software will send **one** MIDI message as **one** UDP packet.
 It may impact system network performance.
 
 ### Hint
-This software will send an empty MIDI Sysex Data (`[0xf0, 0x73, 0x02, 0xf7]`)
+This software will send an dummy packet
 for connection stability if the connection is inactive for the 60s.
 
 - Refresh the TTL of NAPT translation entries.
