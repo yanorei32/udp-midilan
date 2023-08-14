@@ -83,7 +83,7 @@ jobs:
               VERSION_NAME=${VERSION_NAME:1}
           fi
           echo "$VERSION_NAME" > udp-midlan/VERSION.txt
-          cp config.yml LICENSE README.md udp-midlan/
+          cp LICENSE README.md udp-midlan/
           cp target/x86_64-pc-windows-gnu/release/udp-midlan.exe udp-midlan/
           zip -r udp-midlan-windows.zip udp-midlan
           rm udp-midlan/*.exe
