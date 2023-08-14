@@ -38,7 +38,7 @@ async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Er
 
                 match (&message[0], &message[1..d]) {
                     (prefix, content) if prefix == &PREFIX_MIDI_MESSAGE => {
-                        println!("<MIDI> Recv: {:?}", content);
+                        println!("<MIDI> Recv: {content:?}");
                         midi.1.send(content.to_vec()).await?;
                     }
                     _ => {
@@ -83,11 +83,11 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
 
                 match (&message[0], &message[1..len], &message[..len]) {
                     (prefix, content, _) if prefix == &PREFIX_MIDI_MESSAGE => {
-                        println!("<MIDI> Recv: {:?}", content);
+                        println!("<MIDI> Recv: {content:?}");
                         midi.1.send(content.to_vec()).await?;
                     }
                     (_, _, message) if message == KEEPALIVE_MESSAGE => {
-                        println!("<System> KeepAlive from {:?}", addr);
+                        println!("<System> KeepAlive from {addr:?}");
                     }
                     _ => {
                         println!("<System> Unknown Message: {:?}", &message[..len]);
