@@ -24,13 +24,13 @@ async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Er
     let mut message = vec![0u8; 128];
     let mut to_send = vec![PREFIX_MIDI_MESSAGE];
 
-    println!("\nClient Ready.");
+    println!("\n<Client> Ready.");
 
 
     loop {
         tokio::select! {
             d = midi.0.recv() => {
-                let d = d.ok_or("Failed to recv midi")?;
+                let d = d.ok_or("<MIDI> Failed to recv midi")?;
                 println!("<MIDI> Send: {d:?}");
                 to_send.splice(1.., d);
                 sock.send(&to_send).await?;
@@ -51,7 +51,7 @@ async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Er
 
             }
             _ = time::sleep(time::Duration::from_secs(60)) => {
-                println!("KeepAlive: {:?}", &KEEPALIVE_MESSAGE);
+                println!("<System> KeepAlive Signal Send {:?}", &KEEPALIVE_MESSAGE);
                 sock.send(&KEEPALIVE_MESSAGE).await?;
             }
         }
@@ -66,7 +66,7 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
     let mut message = vec![0u8; 128];
     let mut to_send = vec![PREFIX_MIDI_MESSAGE];
 
-    println!("\nServer Ready.");
+    println!("\n<Server> Ready.");
 
     loop {
         tokio::select! {
@@ -75,7 +75,7 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
                     continue;
                 };
 
-                let d = d.ok_or("Failed to recv midi")?;
+                let d = d.ok_or("<MIDI> Failed to recv midi")?;
                 println!("<MIDI> Send: {d:?}");
                 to_send.splice(1.., d);
                 sock.send_to(&to_send, client).await?;
@@ -97,7 +97,7 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
                 }
 
                 if client != Some(addr) {
-                    println!("Client Connected: {addr}");
+                    println!("<System> Client Connected: {addr}");
                     client = Some(addr);
                 }
             },
