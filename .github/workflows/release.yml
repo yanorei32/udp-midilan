@@ -68,34 +68,34 @@ jobs:
           args: --release --target x86_64-pc-windows-gnu
 
       - run: |
-          mkdir udp-midlan
+          mkdir udp-midilan
           cargo license \
             --authors \
             --do-not-bundle \
             --avoid-dev-deps \
             --avoid-build-deps \
             --filter-platform x86_64-pc-windows-gnu \
-              > udp-midlan/CREDITS
+              > udp-midilan/CREDITS
           VERSION_NAME=${GITHUB_REF##*/}
           if [[ $VERSION_NAME == "master" ]]; then
               VERSION_NAME=$(git rev-parse --short HEAD)
           elif [[ ${VERSION_NAME:0:1} == "v" ]]; then
               VERSION_NAME=${VERSION_NAME:1}
           fi
-          echo "$VERSION_NAME" > udp-midlan/VERSION.txt
-          cp LICENSE README.md udp-midlan/
-          cp target/x86_64-pc-windows-gnu/release/udp-midlan.exe udp-midlan/
-          zip -r udp-midlan-windows.zip udp-midlan
-          rm udp-midlan/*.exe
+          echo "$VERSION_NAME" > udp-midilan/VERSION.txt
+          cp LICENSE README.md udp-midilan/
+          cp target/x86_64-pc-windows-gnu/release/udp-midilan.exe udp-midilan/
+          zip -r udp-midilan-windows.zip udp-midilan
+          rm udp-midilan/*.exe
           cargo license \
             --authors \
             --do-not-bundle \
             --avoid-dev-deps \
             --avoid-build-deps \
             --filter-platform x86_64-unknown-linux-gnu \
-              > udp-midlan/CREDITS
-          cp target/x86_64-unknown-linux-gnu/release/udp-midlan udp-midlan/
-          zip -r udp-midlan-linux.zip udp-midlan
+              > udp-midilan/CREDITS
+          cp target/x86_64-unknown-linux-gnu/release/udp-midilan udp-midilan/
+          zip -r udp-midilan-linux.zip udp-midilan
 
       - name: pre-release
         uses: marvinpinto/action-automatic-releases@latest
@@ -106,13 +106,13 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            udp-midlan-windows.zip
-            udp-midlan-linux.zip
+            udp-midilan-windows.zip
+            udp-midilan-linux.zip
 
       - name: tagged-release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            udp-midlan-windows.zip
-            udp-midlan-linux.zip
+            udp-midilan-windows.zip
+            udp-midilan-linux.zip
