@@ -11,32 +11,46 @@ use tokio::{net::UdpSocket, sync::mpsc, time};
 mod model;
 
 type MidiIntr = (mpsc::Receiver<Vec<u8>>, mpsc::Sender<Vec<u8>>);
-static KEEPALIVE_MIDI_MESSAGE: [u8; 4] = [0xf0, 0x73, 0x02, 0xf7];
+
+static PREFIX_MIDI_MESSAGE: u8 = 0x10;
+static KEEPALIVE_MESSAGE: [u8; 2] = [0x00, 0x00];
 
 async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Error>> {
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     sock.connect(server).await?;
-    sock.send(&KEEPALIVE_MIDI_MESSAGE).await?;
+    sock.send(&KEEPALIVE_MESSAGE).await?;
 
     let mut message = vec![0u8; 128];
+    let mut to_send = vec![PREFIX_MIDI_MESSAGE];
 
-    println!("\nClient Ready.");
+    println!("\n<Client> Ready.");
 
     loop {
         tokio::select! {
             d = midi.0.recv() => {
-                let d = &d.ok_or("Failed to recv midi")?;
-                println!("Send: {d:?}");
-                sock.send(d).await?;
+                let d = d.ok_or("<MIDI> Failed to recv midi")?;
+                println!("<MIDI> Send: {d:?}");
+                to_send.splice(1.., d);
+                sock.send(&to_send).await?;
             }
             d = sock.recv(&mut message) => {
                 let d = d?;
-                println!("Recv: {:?}", &message[..d]);
-                midi.1.send(message[..d].to_vec()).await?;
+
+                match (&message[0], &message[1..d]) {
+                    (prefix, content) if prefix == &PREFIX_MIDI_MESSAGE => {
+                        println!("<MIDI> Recv: {content:?}");
+                        midi.1.send(content.to_vec()).await?;
+                    }
+                    _ => {
+                        println!("<System> Unknown Message: {:?}", &message[..d]);
+                        continue;
+                    }
+                }
+
             }
             _ = time::sleep(time::Duration::from_secs(60)) => {
-                println!("KeepAlive: {:?}", &KEEPALIVE_MIDI_MESSAGE);
-                sock.send(&KEEPALIVE_MIDI_MESSAGE).await?;
+                println!("<System> KeepAlive Signal Send {:?}", &KEEPALIVE_MESSAGE);
+                sock.send(&KEEPALIVE_MESSAGE).await?;
             }
         }
     }
@@ -48,8 +62,9 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
 
     let mut client: Option<SocketAddr> = None;
     let mut message = vec![0u8; 128];
+    let mut to_send = vec![PREFIX_MIDI_MESSAGE];
 
-    println!("\nServer Ready.");
+    println!("\n<Server> Ready.");
 
     loop {
         tokio::select! {
@@ -58,18 +73,29 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
                     continue;
                 };
 
-
-                let d = &d.ok_or("Failed to recv midi")?;
-                println!("Send: {d:?}");
-                sock.send_to(d, client).await?;
+                let d = d.ok_or("<MIDI> Failed to recv midi")?;
+                println!("<MIDI> Send: {d:?}");
+                to_send.splice(1.., d);
+                sock.send_to(&to_send, client).await?;
             },
             d = sock.recv_from(&mut message) => {
                 let (len, addr) = d?;
-                println!("Recv: {:?}", &message[..len]);
-                midi.1.send(message[..len].to_vec()).await?;
+
+                match (&message[0], &message[1..len], &message[..len]) {
+                    (prefix, content, _) if prefix == &PREFIX_MIDI_MESSAGE => {
+                        println!("<MIDI> Recv: {content:?}");
+                        midi.1.send(content.to_vec()).await?;
+                    }
+                    (_, _, message) if message == KEEPALIVE_MESSAGE => {
+                        println!("<System> KeepAlive from {addr:?}");
+                    }
+                    _ => {
+                        println!("<System> Unknown Message: {:?}", &message[..len]);
+                    }
+                }
 
                 if client != Some(addr) {
-                    println!("Client Connected: {addr}");
+                    println!("<System> Client Connected: {addr}");
                     client = Some(addr);
                 }
             },
