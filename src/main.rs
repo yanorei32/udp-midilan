@@ -10,7 +10,7 @@ use tokio::{net::UdpSocket, sync::mpsc, time};
 
 mod model;
 
-type MidiIntr = (mpsc::Receiver<Vec<u8>>, mpsc::Sender<Vec<u8>>);
+type MidiIntr = (mpsc::Receiver<Vec<u8>>, Option<mpsc::Sender<Vec<u8>>>);
 static KEEPALIVE_MIDI_MESSAGE: [u8; 4] = [0xf0, 0x73, 0x02, 0xf7];
 
 async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Error>> {
@@ -32,7 +32,9 @@ async fn client(mut midi: MidiIntr, server: SocketAddr) -> Result<(), Box<dyn Er
             d = sock.recv(&mut message) => {
                 let d = d?;
                 println!("Recv: {:?}", &message[..d]);
-                midi.1.send(message[..d].to_vec()).await?;
+                if let Some(tx) = &midi.1 {
+                    tx.send(message[..d].to_vec()).await?;
+                }
             }
             _ = time::sleep(time::Duration::from_secs(60)) => {
                 println!("KeepAlive: {:?}", &KEEPALIVE_MIDI_MESSAGE);
@@ -66,7 +68,9 @@ async fn server(mut midi: MidiIntr, port: u16) -> Result<(), Box<dyn Error>> {
             d = sock.recv_from(&mut message) => {
                 let (len, addr) = d?;
                 println!("Recv: {:?}", &message[..len]);
-                midi.1.send(message[..len].to_vec()).await?;
+                if let Some(tx) = &midi.1 {
+                    tx.send(message[..len].to_vec()).await?;
+                }
 
                 if client != Some(addr) {
                     println!("Client Connected: {addr}");
@@ -135,6 +139,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("\n[Setup] NETWORK --> MIDI-Out Device");
     let midi_out_port = ask_port(&midi_out, "Output");
     let (out_tx, mut out_rx) = mpsc::channel::<Vec<u8>>(32);
+    let out_tx = if midi_out_port.is_some() { Some(out_tx) } else { None };
 
     if let Some(midi_out_port) = midi_out_port {
         let mut conn_out = midi_out.connect(&midi_out_port, "UDP MidiLAN Output")?;
@@ -147,6 +152,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         });
+    } else {
+        out_rx.close();
     }
 
     match c {
