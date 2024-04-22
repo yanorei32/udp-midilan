@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-midir = "0.9.1"
+midir = "0.10.0"
 tokio = { version = "1.37.0", features = ["net", "macros", "rt", "sync", "time"] }
 
 [profile.release]
